@@ -15,34 +15,23 @@ export function generateInvoicePDF(client, transaction) {
 
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Design system colors
-  const primaryColor = [15, 23, 42]; // Slate 900
-  const accentColor = [16, 185, 129]; // Emerald 500
-  const lightGrey = [241, 245, 249]; // Slate 100
-  const darkGrey = [100, 116, 139]; // Slate 500
+  // Set stroke/draw color and text color to black for clean black-and-white print
+  doc.setTextColor(0, 0, 0);
+  doc.setDrawColor(0, 0, 0);
 
-  // 1. Header Banner & Branding
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 25, 'F');
-  
-  doc.setFillColor(...accentColor);
-  doc.rect(0, 25, pageWidth, 2, 'F');
-
-  doc.setTextColor(255, 255, 255);
+  // 1. Plain Header Title (No colored banners or branding)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text('BILTYBOOK LEDGER', 15, 16);
+  doc.setFontSize(18);
+  doc.text('INVOICE', 15, 18);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text('INVOICE / BILL OF SUPPLY', pageWidth - 15, 15, { align: 'right' });
+  // Single solid horizontal rule under title
+  doc.setLineWidth(0.4);
+  doc.line(15, 22, pageWidth - 15, 22);
 
-  // 2. Metadata Columns (Invoice Details)
-  doc.setTextColor(...primaryColor);
+  // 2. Client Details (Left side) and Date (Right side)
+  let currentY = 30;
+  
   doc.setFontSize(10);
-  
-  let currentY = 40;
-  
   doc.setFont('helvetica', 'bold');
   doc.text('BILL TO:', 15, currentY);
   doc.setFont('helvetica', 'normal');
@@ -52,25 +41,25 @@ export function generateInvoicePDF(client, transaction) {
     doc.text(`Phone: ${client.phone}`, 15, currentY + 16);
   }
 
-  // Invoice parameters (Top Right)
+  // Right-aligned Bill Date (Only printing date, no extra invoice details)
   doc.setFont('helvetica', 'bold');
-  doc.text('INVOICE DETAILS:', pageWidth - 75, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Bill Date: ${transaction.dateOfBill || transaction.date}`, pageWidth - 75, currentY + 6);
-  doc.text(`Tx ID: ${transaction.id.substring(2, 10).toUpperCase()}`, pageWidth - 75, currentY + 11);
-  doc.text(`Type: Bill Generation`, pageWidth - 75, currentY + 16);
+  doc.text(`Date: ${transaction.dateOfBill || transaction.date}`, pageWidth - 15, currentY, { align: 'right' });
 
-  currentY += 26;
+  // Adjust vertical positioning
+  currentY += client.phone ? 22 : 16;
 
-  // 3. Bilty Details Section (If available)
+  // Thin line divider
+  doc.setLineWidth(0.2);
+  doc.line(15, currentY, pageWidth - 15, currentY);
+  currentY += 8;
+
+  // 3. Bilty Details Section (Clean black and white table, if present)
   if (transaction.biltys && transaction.biltys.length > 0) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...primaryColor);
-    doc.text(`Bilty Details (${transaction.numBiltys || transaction.biltys.length} biltys)`, 15, currentY);
-    
+    doc.setFontSize(10);
+    doc.text('Bilty Details', 15, currentY);
     currentY += 4;
-    
+
     const biltyHeaders = [['Sl No', 'Bilty Number', 'Transport Name', 'Bilty Date']];
     const biltyBody = transaction.biltys.map((b, index) => [
       index + 1,
@@ -83,47 +72,54 @@ export function generateInvoicePDF(client, transaction) {
       startY: currentY,
       head: biltyHeaders,
       body: biltyBody,
-      theme: 'grid',
+      theme: 'grid', // Force clear black outlines
       headStyles: { 
-        fillColor: primaryColor,
-        textColor: [255, 255, 255],
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
         fontSize: 9,
-        halign: 'left'
+        fontStyle: 'bold'
       },
-      bodyStyles: { fontSize: 8.5 },
+      bodyStyles: { 
+        textColor: [0, 0, 0],
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+        fontSize: 8.5 
+      },
       margin: { left: 15, right: 15 },
       styles: { cellPadding: 2 }
     });
 
-    currentY = doc.lastAutoTable.finalY + 10;
+    currentY = doc.lastAutoTable.finalY + 8;
   }
 
-  // 4. Items Table Section
+  // 4. Items Sold Table
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...primaryColor);
-  doc.text('Items Details', 15, currentY);
-  
+  doc.setFontSize(10);
+  doc.text('Items Sold', 15, currentY);
   currentY += 4;
 
-  const itemHeaders = [['Sl No', 'Item Description', 'Cartons', 'Qty / Carton', 'Rate / Pcs', 'Total Amount']];
+  const itemHeaders = [['Sl No', 'Item Description', 'Cartons', 'Qty / Carton', 'Rate / Pcs', 'Total (Rs.)']];
   const itemBody = (transaction.items || []).map(item => [
     item.slNo,
     item.item,
     item.numCartons,
     item.qtyPerCarton,
-    `Rs. ${Number(item.rate).toFixed(2)}`,
-    `Rs. ${Number(item.total).toFixed(2)}`
+    Number(item.rate).toFixed(2),
+    Number(item.total).toFixed(2)
   ]);
 
   doc.autoTable({
     startY: currentY,
     head: itemHeaders,
     body: itemBody,
-    theme: 'striped',
+    theme: 'grid', // 'grid' theme ensures clear outlines/borders on all cells
     headStyles: {
-      fillColor: accentColor,
-      textColor: [255, 255, 255],
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.1,
       fontSize: 9.5,
       fontStyle: 'bold'
     },
@@ -135,40 +131,27 @@ export function generateInvoicePDF(client, transaction) {
       4: { cellWidth: 25, halign: 'right' },
       5: { cellWidth: 30, halign: 'right' }
     },
-    bodyStyles: { fontSize: 9 },
+    bodyStyles: { 
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.1,
+      fontSize: 9 
+    },
     margin: { left: 15, right: 15 },
-    styles: { cellPadding: 3 }
+    styles: { cellPadding: 2.5 }
   });
 
   currentY = doc.lastAutoTable.finalY + 8;
 
-  // 5. Total Calculations & Footer
-  doc.setFillColor(...lightGrey);
-  doc.rect(pageWidth - 85, currentY, 70, 16, 'F');
-  
+  // 5. Grand Total (Aligned Right with clear outlines)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(...primaryColor);
-  doc.text('Grand Total:', pageWidth - 80, currentY + 10);
-  
-  doc.setFontSize(13);
-  doc.setTextColor(...accentColor);
-  doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 20, currentY + 10, { align: 'right' });
+  doc.setFontSize(11);
+  doc.text('Grand Total:', pageWidth - 70, currentY);
+  doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 15, currentY, { align: 'right' });
 
-  // Signature lines & Professional sign off
-  currentY += 28;
-  doc.setDrawColor(...lightGrey);
-  doc.line(15, currentY, 75, currentY);
-  doc.line(pageWidth - 75, currentY, pageWidth - 15, currentY);
-  
-  doc.setFontSize(8.5);
-  doc.setTextColor(...darkGrey);
-  doc.text("Customer's Signature", 45, currentY + 4, { align: 'center' });
-  doc.text("Authorized Signatory", pageWidth - 45, currentY + 4, { align: 'center' });
-
-  // Footer Branding
-  doc.setFontSize(8);
-  doc.text("Thank you for your business!", pageWidth / 2, pageWidth >= 297 ? 200 : 282, { align: 'center' });
+  // Border box around total for clarity
+  doc.setLineWidth(0.2);
+  doc.rect(pageWidth - 73, currentY - 5, 58, 8);
 
   // Save the PDF
   const filename = `Invoice_${client.name.replace(/\s+/g, '_')}_${transaction.date}.pdf`;
@@ -191,70 +174,46 @@ export function generatePaymentPDF(client, transaction) {
 
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  const primaryColor = [15, 23, 42];
-  const accentColor = [16, 185, 129];
-  const darkGrey = [100, 116, 139];
+  doc.setTextColor(0, 0, 0);
+  doc.setDrawColor(0, 0, 0);
 
-  // Header Banner
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 20, 'F');
-  
-  doc.setFillColor(...accentColor);
-  doc.rect(0, 20, pageWidth, 1.5, 'F');
-
-  doc.setTextColor(255, 255, 255);
+  // Title
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('PAYMENT RECEIPT', 10, 13);
+  doc.setFontSize(13);
+  doc.text('PAYMENT RECEIPT', 10, 14);
 
-  // Logo branding
-  doc.setFontSize(8.5);
-  doc.text('BILTYBOOK', pageWidth - 10, 13, { align: 'right' });
+  // Horizontal line under title
+  doc.setLineWidth(0.4);
+  doc.line(10, 17, pageWidth - 10, 17);
 
   // Receipt Content
-  doc.setTextColor(...primaryColor);
+  let currentY = 24;
   doc.setFontSize(9.5);
-  
-  let currentY = 32;
   doc.setFont('helvetica', 'bold');
   doc.text('RECEIPT TO:', 10, currentY);
   doc.setFont('helvetica', 'normal');
   doc.text(`Client Name: ${client.name}`, 10, currentY + 5);
   doc.text(`Place: ${client.place}`, 10, currentY + 10);
 
-  // Receipt metadata
+  // Right-aligned Date
   doc.setFont('helvetica', 'bold');
-  doc.text('RECEIPT DETAILS:', pageWidth - 65, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Date: ${transaction.date}`, pageWidth - 65, currentY + 5);
-  doc.text(`Receipt ID: ${transaction.id.substring(2, 10).toUpperCase()}`, pageWidth - 65, currentY + 10);
+  doc.text(`Date: ${transaction.date}`, pageWidth - 10, currentY, { align: 'right' });
 
-  currentY += 22;
+  currentY += 20;
 
-  // Receipt box
-  doc.setFillColor(241, 245, 249);
-  doc.rect(10, currentY, pageWidth - 20, 24, 'F');
+  // Simple clean outline box for payment amount
+  doc.setLineWidth(0.2);
+  doc.rect(10, currentY, pageWidth - 20, 14);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('Amount Received:', 15, currentY + 10);
-  
-  doc.setFontSize(14);
-  doc.setTextColor(...accentColor);
-  doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 15, currentY + 10, { align: 'right' });
+  doc.text('Amount Received:', 14, currentY + 9);
+  doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 14, currentY + 9, { align: 'right' });
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(...darkGrey);
-  doc.text(`Description: ${transaction.description || 'Payment received and credited to account.'}`, 15, currentY + 18);
-
-  currentY += 40;
-
-  // Signatures
-  doc.line(10, currentY, 50, currentY);
-  doc.line(pageWidth - 50, currentY, pageWidth - 10, currentY);
-  doc.text("Received By", 30, currentY + 4, { align: 'center' });
-  doc.text("Customer Signature", pageWidth - 30, currentY + 4, { align: 'center' });
+  if (transaction.description) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text(`Description / Note: ${transaction.description}`, 10, currentY + 20);
+  }
 
   const filename = `Receipt_${client.name.replace(/\s+/g, '_')}_${transaction.date}.pdf`;
   doc.save(filename);
