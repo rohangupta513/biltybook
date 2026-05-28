@@ -24,6 +24,11 @@ import {
 
 import { generateInvoicePDF, generatePaymentPDF } from './pdf.js';
 
+// Safe Lucide alias to prevent strict mode ReferenceErrors
+const lucide = window.lucide || {
+  createIcons: () => console.warn('Lucide CDN failed to load.')
+};
+
 // Application State
 let currentUser = null;
 let currentClientId = null;
