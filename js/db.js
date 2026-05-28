@@ -2,18 +2,29 @@
 
 import { getDb, getFirebaseStatus } from './firebase-config.js';
 
-// Cache keys
-const CLIENTS_KEY = 'biltybook_clients';
-const TRANSACTIONS_KEY = 'biltybook_transactions';
+let currentDbUserId = 'local';
+
+export function setDbUserId(userId) {
+  currentDbUserId = userId || 'local';
+  console.log('Database user scope updated to:', currentDbUserId);
+}
+
+function getClientsKey() {
+  return `biltybook_clients_${currentDbUserId}`;
+}
+
+function getTransactionsKey() {
+  return `biltybook_transactions_${currentDbUserId}`;
+}
 
 // Get local data
 export function getLocalClients() {
-  const data = localStorage.getItem(CLIENTS_KEY);
+  const data = localStorage.getItem(getClientsKey());
   return data ? JSON.parse(data) : [];
 }
 
 export function getLocalTransactions() {
-  const data = localStorage.getItem(TRANSACTIONS_KEY);
+  const data = localStorage.getItem(getTransactionsKey());
   return data ? JSON.parse(data) : [];
 }
 
@@ -35,7 +46,7 @@ export function recalculateDueAmounts() {
     return { ...client, totalDueAmount: totalDue };
   });
 
-  localStorage.setItem(CLIENTS_KEY, JSON.stringify(updatedClients));
+  localStorage.setItem(getClientsKey(), JSON.stringify(updatedClients));
   return updatedClients;
 }
 
@@ -54,7 +65,7 @@ export function addClientLocal(name, place, phone = '', email = '', notes = '') 
     updatedAt: Date.now()
   };
   clients.push(newClient);
-  localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+  localStorage.setItem(getClientsKey(), JSON.stringify(clients));
   return newClient;
 }
 
@@ -62,12 +73,12 @@ export function deleteClientLocal(clientId) {
   // Delete client
   let clients = getLocalClients();
   clients = clients.filter(c => c.id !== clientId);
-  localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+  localStorage.setItem(getClientsKey(), JSON.stringify(clients));
 
   // Delete associated transactions
   let transactions = getLocalTransactions();
   transactions = transactions.filter(t => t.clientId !== clientId);
-  localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+  localStorage.setItem(getTransactionsKey(), JSON.stringify(transactions));
 }
 
 export function addTransactionLocal(clientId, type, amount, date, description = '', extraData = {}) {
@@ -83,7 +94,7 @@ export function addTransactionLocal(clientId, type, amount, date, description = 
     ...extraData // Includes biltys, items for BILL
   };
   transactions.push(newTx);
-  localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+  localStorage.setItem(getTransactionsKey(), JSON.stringify(transactions));
   recalculateDueAmounts();
   return newTx;
 }
@@ -91,7 +102,7 @@ export function addTransactionLocal(clientId, type, amount, date, description = 
 export function deleteTransactionLocal(transactionId) {
   let transactions = getLocalTransactions();
   transactions = transactions.filter(t => t.id !== transactionId);
-  localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+  localStorage.setItem(getTransactionsKey(), JSON.stringify(transactions));
   recalculateDueAmounts();
 }
 
@@ -208,8 +219,8 @@ export async function syncDataWithCloud(userId) {
     }
 
     // Save merged data locally
-    localStorage.setItem(CLIENTS_KEY, JSON.stringify(mergedClients));
-    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(mergedTxs));
+    localStorage.setItem(getClientsKey(), JSON.stringify(mergedClients));
+    localStorage.setItem(getTransactionsKey(), JSON.stringify(mergedTxs));
 
     // Recalculate dues based on synced records
     return recalculateDueAmounts();

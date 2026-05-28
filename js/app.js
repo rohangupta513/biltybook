@@ -19,7 +19,8 @@ import {
   addTransaction,
   deleteTransaction,
   syncDataWithCloud,
-  recalculateDueAmounts
+  recalculateDueAmounts,
+  setDbUserId
 } from './db.js';
 
 import { generateInvoicePDF, generatePaymentPDF } from './pdf.js';
@@ -74,10 +75,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (user) {
         currentUser = user;
         isLocalMode = false;
+        setDbUserId(user.uid);
         showScreen('dashboard');
         loadDashboardData(true);
       } else {
         currentUser = null;
+        setDbUserId('local');
         if (!isLocalMode) {
           showScreen('auth');
         }
@@ -90,6 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lastSessionLocal = localStorage.getItem('biltybook_local_session') === 'true';
     if (lastSessionLocal) {
       isLocalMode = true;
+      setDbUserId('local');
       showScreen('dashboard');
       loadDashboardData(false);
     } else {
@@ -587,6 +591,7 @@ function setupEventListeners() {
   // Local Offline Bypass Link
   document.getElementById('btn-local-mode').addEventListener('click', () => {
     isLocalMode = true;
+    setDbUserId('local');
     localStorage.setItem('biltybook_local_session', 'true');
     showScreen('dashboard');
   });
@@ -622,11 +627,13 @@ function setupEventListeners() {
   document.getElementById('btn-logout').addEventListener('click', async () => {
     if (isLocalMode) {
       isLocalMode = false;
+      setDbUserId('local');
       localStorage.removeItem('biltybook_local_session');
       showScreen('auth');
     } else {
       if (confirm('Are you sure you want to sign out?')) {
         await signOutUser();
+        setDbUserId('local');
         showScreen('auth');
       }
     }
