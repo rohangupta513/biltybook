@@ -770,8 +770,7 @@ function setupEventListeners() {
   });
 
   // Settings Dialog handlers
-  const settingsBtn = document.getElementById('btn-settings');
-  settingsBtn.addEventListener('click', () => {
+  const openSettingsHandler = () => {
     const status = getFirebaseStatus();
     const banner = document.getElementById('db-status-banner');
     const bannerText = document.getElementById('db-status-text');
@@ -798,7 +797,15 @@ function setupEventListeners() {
     }
 
     openModal(drawers.settings);
-  });
+  };
+
+  const settingsBtn = document.getElementById('btn-settings');
+  settingsBtn.addEventListener('click', openSettingsHandler);
+
+  const authSettingsBtn = document.getElementById('btn-auth-settings');
+  if (authSettingsBtn) {
+    authSettingsBtn.addEventListener('click', openSettingsHandler);
+  }
 
   // Settings Save
   document.getElementById('form-firebase-config').addEventListener('submit', (e) => {
