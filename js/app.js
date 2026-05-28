@@ -469,11 +469,11 @@ function openInvoicePreview(client, transaction) {
   const newDownloadBtn = downloadBtn.cloneNode(true);
   downloadBtn.parentNode.replaceChild(newDownloadBtn, downloadBtn);
   
-  newDownloadBtn.addEventListener('click', () => {
+  newDownloadBtn.addEventListener('click', async () => {
     if (transaction.type === 'BILL') {
-      generateInvoicePDF(client, transaction);
+      await generateInvoicePDF(client, transaction);
     } else {
-      generatePaymentPDF(client, transaction);
+      await generatePaymentPDF(client, transaction);
     }
     closeModal();
   });

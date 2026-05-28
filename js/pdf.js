@@ -1,6 +1,16 @@
 // pdf.js - PDF Generation module using jsPDF and jsPDF AutoTable
 
-export function generateInvoicePDF(client, transaction) {
+// Helper function to load images asynchronously as promises
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+  });
+}
+
+export async function generateInvoicePDF(client, transaction) {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) {
     alert("jsPDF library is not loaded. Please check your internet connection.");
@@ -19,9 +29,31 @@ export function generateInvoicePDF(client, transaction) {
   doc.setTextColor(0, 0, 0);
   doc.setDrawColor(0, 0, 0);
 
-  // 1. Plain Header Title (No colored banners or branding)
+  // Load Ganesha watermark image asynchronously
+  let ganeshImg = null;
+  try {
+    ganeshImg = await loadImage('assets/ganesh_watermark.png');
+  } catch (e) {
+    console.warn('Failed to load Ganesha watermark:', e);
+  }
+
+  // Draw Ganesha watermark in background with low opacity (8%)
+  if (ganeshImg) {
+    try {
+      doc.saveGraphicsState();
+      const gState = new doc.GState({ opacity: 0.08 }); // 8% opacity is a perfect faded watermark
+      doc.setGState(gState);
+      // Center on page. A4 width is 210mm, height is 297mm. Watermark size is 120mm.
+      doc.addImage(ganeshImg, 'PNG', (pageWidth - 120) / 2, (297 - 120) / 2, 120, 120);
+      doc.restoreGraphicsState();
+    } catch (err) {
+      console.warn('Failed to apply faded watermark opacity:', err);
+    }
+  }
+
+  // 1. Plain Header Title (Increased font size from 18 to 20)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
+  doc.setFontSize(20);
   doc.text('INVOICE', 15, 18);
 
   // Single solid horizontal rule under title
@@ -31,7 +63,8 @@ export function generateInvoicePDF(client, transaction) {
   // 2. Client Details (Left side) and Date (Right side)
   let currentY = 30;
   
-  doc.setFontSize(10);
+  // Increased font sizes from 10 to 12
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('BILL TO:', 15, currentY);
   doc.setFont('helvetica', 'normal');
@@ -41,7 +74,7 @@ export function generateInvoicePDF(client, transaction) {
     doc.text(`Phone: ${client.phone}`, 15, currentY + 16);
   }
 
-  // Right-aligned Bill Date (Only printing date)
+  // Right-aligned Bill Date (Increased font size from 10 to 12)
   doc.setFont('helvetica', 'bold');
   doc.text(`Date: ${transaction.dateOfBill || transaction.date}`, pageWidth - 15, currentY, { align: 'right' });
 
@@ -50,11 +83,12 @@ export function generateInvoicePDF(client, transaction) {
 
   // 3. Items Sold Table (Printed BEFORE Bilty Details)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(12); // Increased font size from 10 to 12
   doc.text('Items Sold', 15, currentY);
   currentY += 4;
 
-  const itemHeaders = [['Sl No', 'Item Description', 'Cartons', 'Qty / Carton', 'Rate / Pcs', 'Total (Rs.)']];
+  // Renamed columns exactly as requested: Sl.no , Items  , No. of c/n , Qnty. per c/n , Rate , Total
+  const itemHeaders = [['Sl.no', 'Items', 'No. of c/n', 'Qnty. per c/n', 'Rate', 'Total']];
   const itemBody = (transaction.items || []).map(item => [
     item.slNo,
     item.item,
@@ -74,7 +108,7 @@ export function generateInvoicePDF(client, transaction) {
       textColor: [0, 0, 0],
       lineColor: [0, 0, 0],
       lineWidth: 0.1,
-      fontSize: 9.5,
+      fontSize: 11.5, // Increased from 9.5 to 11.5
       fontStyle: 'bold'
     },
     columnStyles: {
@@ -89,7 +123,7 @@ export function generateInvoicePDF(client, transaction) {
       textColor: [0, 0, 0],
       lineColor: [0, 0, 0],
       lineWidth: 0.1,
-      fontSize: 9 
+      fontSize: 11 // Increased from 9 to 11
     },
     margin: { left: 15, right: 15 },
     styles: { cellPadding: 2.5 }
@@ -100,7 +134,7 @@ export function generateInvoicePDF(client, transaction) {
   // 4. Bilty Details Section (Printed AFTER Items Sold Table)
   if (transaction.biltys && transaction.biltys.length > 0) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(12); // Increased from 10 to 12
     doc.text('Bilty Details', 15, currentY);
     currentY += 4;
 
@@ -122,14 +156,14 @@ export function generateInvoicePDF(client, transaction) {
         textColor: [0, 0, 0],
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
-        fontSize: 9,
+        fontSize: 11, // Increased from 9 to 11
         fontStyle: 'bold'
       },
       bodyStyles: { 
         textColor: [0, 0, 0],
         lineColor: [0, 0, 0],
         lineWidth: 0.1,
-        fontSize: 8.5 
+        fontSize: 10.5 // Increased from 8.5 to 10.5
       },
       margin: { left: 15, right: 15 },
       styles: { cellPadding: 2 }
@@ -140,7 +174,7 @@ export function generateInvoicePDF(client, transaction) {
 
   // 5. Grand Total (No border box or horizontal dividers around it)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(13); // Increased from 11 to 13
   doc.text('Grand Total:', pageWidth - 70, currentY);
   doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 15, currentY, { align: 'right' });
 
@@ -150,7 +184,7 @@ export function generateInvoicePDF(client, transaction) {
 }
 
 // Generate receipt PDF for Payment made by client
-export function generatePaymentPDF(client, transaction) {
+export async function generatePaymentPDF(client, transaction) {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) {
     alert("jsPDF library is not loaded.");
@@ -168,18 +202,40 @@ export function generatePaymentPDF(client, transaction) {
   doc.setTextColor(0, 0, 0);
   doc.setDrawColor(0, 0, 0);
 
-  // Title
+  // Load Ganesha watermark image asynchronously
+  let ganeshImg = null;
+  try {
+    ganeshImg = await loadImage('assets/ganesh_watermark.png');
+  } catch (e) {
+    console.warn('Failed to load Ganesha watermark:', e);
+  }
+
+  // Draw Ganesha watermark in background with low opacity (8%)
+  if (ganeshImg) {
+    try {
+      doc.saveGraphicsState();
+      const gState = new doc.GState({ opacity: 0.08 });
+      doc.setGState(gState);
+      // Center on A5 page (148mm x 210mm). Watermark size is 80mm.
+      doc.addImage(ganeshImg, 'PNG', (pageWidth - 80) / 2, (210 - 80) / 2, 80, 80);
+      doc.restoreGraphicsState();
+    } catch (err) {
+      console.warn('Failed to apply faded watermark opacity:', err);
+    }
+  }
+
+  // Title (Increased from 13 to 15)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(15);
   doc.text('PAYMENT RECEIPT', 10, 14);
 
   // Horizontal line under title
   doc.setLineWidth(0.4);
   doc.line(10, 17, pageWidth - 10, 17);
 
-  // Receipt Content
+  // Receipt Content (Increased from 9.5 to 11.5)
   let currentY = 24;
-  doc.setFontSize(9.5);
+  doc.setFontSize(11.5);
   doc.setFont('helvetica', 'bold');
   doc.text('RECEIPT TO:', 10, currentY);
   doc.setFont('helvetica', 'normal');
@@ -199,7 +255,7 @@ export function generatePaymentPDF(client, transaction) {
 
   if (transaction.description) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+    doc.setFontSize(10.5); // Increased from 8.5 to 10.5
     doc.text(`Description / Note: ${transaction.description}`, 10, currentY + 16);
   }
 
