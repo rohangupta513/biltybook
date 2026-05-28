@@ -10,7 +10,7 @@ function loadImage(url) {
   });
 }
 
-export async function generateInvoicePDF(client, transaction) {
+export async function generateInvoicePDF(client, transaction, action = 'save') {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) {
     alert("jsPDF library is not loaded. Please check your internet connection.");
@@ -178,13 +178,19 @@ export async function generateInvoicePDF(client, transaction) {
   doc.text('Grand Total:', pageWidth - 70, currentY);
   doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 15, currentY, { align: 'right' });
 
-  // Save the PDF
+  // Save or Print the PDF
   const filename = `Invoice_${client.name.replace(/\s+/g, '_')}_${transaction.date}.pdf`;
-  doc.save(filename);
+  if (action === 'print') {
+    doc.autoPrint();
+    const blobUrl = doc.output('bloburl');
+    window.open(blobUrl, '_blank');
+  } else {
+    doc.save(filename);
+  }
 }
 
 // Generate receipt PDF for Payment made by client
-export async function generatePaymentPDF(client, transaction) {
+export async function generatePaymentPDF(client, transaction, action = 'save') {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) {
     alert("jsPDF library is not loaded.");
@@ -260,5 +266,11 @@ export async function generatePaymentPDF(client, transaction) {
   }
 
   const filename = `Receipt_${client.name.replace(/\s+/g, '_')}_${transaction.date}.pdf`;
-  doc.save(filename);
+  if (action === 'print') {
+    doc.autoPrint();
+    const blobUrl = doc.output('bloburl');
+    window.open(blobUrl, '_blank');
+  } else {
+    doc.save(filename);
+  }
 }

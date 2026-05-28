@@ -20,7 +20,8 @@ import {
   deleteTransaction,
   syncDataWithCloud,
   recalculateDueAmounts,
-  setDbUserId
+  setDbUserId,
+  editTransaction
 } from './db.js';
 
 import { generateInvoicePDF, generatePaymentPDF } from './pdf.js';
@@ -36,6 +37,7 @@ let currentClientId = null;
 let activeScreen = 'screen-auth';
 let isSignupMode = false;
 let isLocalMode = false;
+let editingTransactionId = null;
 
 // DOM Elements
 const screens = {
@@ -343,6 +345,9 @@ function renderClientDetailsData() {
           <button class="btn btn-mini btn-secondary btn-pdf" data-txid="${tx.id}">
             <i data-lucide="file-down"></i> ${pdfBtnText}
           </button>
+          <button class="btn btn-mini btn-secondary btn-edit-tx" data-txid="${tx.id}">
+            <i data-lucide="pencil"></i>
+          </button>
           <button class="btn btn-mini btn-secondary btn-delete-tx" data-txid="${tx.id}">
             <i data-lucide="trash" class="text-crimson"></i>
           </button>
@@ -354,6 +359,12 @@ function renderClientDetailsData() {
     card.querySelector('.btn-pdf').addEventListener('click', (e) => {
       e.stopPropagation();
       openInvoicePreview(client, tx);
+    });
+
+    // Edit Click Handler
+    card.querySelector('.btn-edit-tx').addEventListener('click', (e) => {
+      e.stopPropagation();
+      startEditTransaction(tx);
     });
 
     // Delete Click Handler
@@ -478,21 +489,35 @@ function openInvoicePreview(client, transaction) {
     closeModal();
   });
 
+  // Attach print listener dynamically to print button
+  const printBtn = document.getElementById('btn-print-pdf-invoice');
+  const newPrintBtn = printBtn.cloneNode(true);
+  printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
+
+  newPrintBtn.addEventListener('click', async () => {
+    if (transaction.type === 'BILL') {
+      await generateInvoicePDF(client, transaction, 'print');
+    } else {
+      await generatePaymentPDF(client, transaction, 'print');
+    }
+    closeModal();
+  });
+
   openModal(drawers.preview);
   lucide.createIcons();
 }
 
 // ==================== DYNAMIC BILL TABLES ROW GENERATION ====================
 
-function addBiltyRow() {
+function addBiltyRow(biltyNo = '', transportName = '') {
   const container = document.getElementById('bilty-rows-container');
   const count = container.children.length;
   
   const div = document.createElement('div');
   div.className = 'bilty-row';
   div.innerHTML = `
-    <input type="text" class="form-input bilty-no" placeholder="Bilty No" style="padding: 8px 12px; font-size: 13px;">
-    <input type="text" class="form-input bilty-transport" placeholder="Transport Name" style="padding: 8px 12px; font-size: 13px;">
+    <input type="text" class="form-input bilty-no" placeholder="Bilty No" value="${biltyNo}" style="padding: 8px 12px; font-size: 13px;">
+    <input type="text" class="form-input bilty-transport" placeholder="Transport Name" value="${transportName}" style="padding: 8px 12px; font-size: 13px;">
     <button type="button" class="btn-remove-row flex-center"><i data-lucide="trash-2"></i></button>
   `;
   
@@ -504,18 +529,20 @@ function addBiltyRow() {
   lucide.createIcons();
 }
 
-function addItemRow() {
+function addItemRow(item = '', cartons = '', qty = '', rate = '') {
   const tbody = document.getElementById('items-table-body');
   const slNo = tbody.children.length + 1;
+  
+  const totalVal = (cartons && qty && rate) ? (Number(cartons) * Number(qty) * Number(rate)).toFixed(2) : '0.00';
   
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td class="sl-no">${slNo}</td>
-    <td><input type="text" class="item-desc" placeholder="Item details" required></td>
-    <td><input type="number" class="item-cartons" placeholder="0" min="1" required style="width: 60px;"></td>
-    <td><input type="number" class="item-qty" placeholder="0" min="1" required style="width: 65px;"></td>
-    <td><input type="number" class="item-rate" placeholder="0.00" min="0" step="any" required style="width: 70px;"></td>
-    <td class="table-row-total">0.00</td>
+    <td><input type="text" class="item-desc" placeholder="Item details" value="${item}" required></td>
+    <td><input type="number" class="item-cartons" placeholder="0" min="1" value="${cartons}" required style="width: 60px;"></td>
+    <td><input type="number" class="item-qty" placeholder="0" min="1" value="${qty}" required style="width: 65px;"></td>
+    <td><input type="number" class="item-rate" placeholder="0.00" min="0" step="any" value="${rate}" required style="width: 70px;"></td>
+    <td class="table-row-total">${totalVal}</td>
     <td><button type="button" class="btn-remove-row flex-center"><i data-lucide="trash-2"></i></button></td>
   `;
   
@@ -564,6 +591,50 @@ function recalculateBillGrandTotal() {
   });
   
   document.getElementById('bill-grand-total').textContent = `Rs. ${grandTotal.toFixed(2)}`;
+}
+
+// ==================== TRANSACTION EDIT HANDLER ====================
+function startEditTransaction(tx) {
+  editingTransactionId = tx.id;
+  
+  if (tx.type === 'PAYMENT') {
+    const drawer = drawers.addPayment;
+    drawer.querySelector('.drawer-header h3').textContent = 'Edit Payment';
+    document.querySelector('button[form="form-add-payment"]').textContent = 'Save Changes';
+    
+    document.getElementById('payment-amount').value = tx.amount;
+    document.getElementById('payment-date').value = tx.date;
+    document.getElementById('payment-desc').value = tx.description || '';
+    
+    openModal(drawer);
+  } else if (tx.type === 'BILL') {
+    const drawer = drawers.addBill;
+    drawer.querySelector('.drawer-header h3').textContent = 'Edit Bill Generation';
+    document.querySelector('button[form="form-add-bill"]').textContent = 'Save Changes';
+    
+    document.getElementById('bill-date').value = tx.dateOfBill || tx.date;
+    document.getElementById('bill-desc').value = tx.description || '';
+    
+    document.getElementById('bilty-rows-container').innerHTML = '';
+    document.getElementById('items-table-body').innerHTML = '';
+    
+    if (tx.biltys && tx.biltys.length > 0) {
+      tx.biltys.forEach(b => {
+        addBiltyRow(b.biltyNo, b.transportName);
+      });
+    }
+    
+    if (tx.items && tx.items.length > 0) {
+      tx.items.forEach(item => {
+        addItemRow(item.item, item.numCartons, item.qtyPerCarton, item.rate);
+      });
+    } else {
+      addItemRow();
+    }
+    
+    recalculateBillGrandTotal();
+    openModal(drawer);
+  }
 }
 
 // ==================== EVENT BINDINGS ====================
@@ -695,12 +766,17 @@ function setupEventListeners() {
 
   // Drawer Trigger: Add Payment
   document.getElementById('btn-open-payment').addEventListener('click', () => {
+    editingTransactionId = null;
+    const drawer = drawers.addPayment;
+    drawer.querySelector('.drawer-header h3').textContent = 'Record Payment';
+    document.querySelector('button[form="form-add-payment"]').textContent = 'Record Payment';
+
     document.getElementById('form-add-payment').reset();
     document.getElementById('payment-date').value = new Date().toISOString().substring(0, 10);
-    openModal(drawers.addPayment);
+    openModal(drawer);
   });
 
-  // Form Submit: Add Payment
+  // Form Submit: Add/Edit Payment
   document.getElementById('form-add-payment').addEventListener('submit', async (e) => {
     e.preventDefault();
     const amount = document.getElementById('payment-amount').value;
@@ -708,7 +784,11 @@ function setupEventListeners() {
     const desc = document.getElementById('payment-desc').value;
 
     const userId = currentUser ? currentUser.uid : null;
-    await addTransaction(userId, currentClientId, 'PAYMENT', amount, date, desc);
+    if (editingTransactionId) {
+      await editTransaction(userId, editingTransactionId, amount, date, desc);
+    } else {
+      await addTransaction(userId, currentClientId, 'PAYMENT', amount, date, desc);
+    }
     
     closeModal();
     renderClientDetailsData();
@@ -716,6 +796,11 @@ function setupEventListeners() {
 
   // Drawer Trigger: Create Bill
   document.getElementById('btn-open-bill').addEventListener('click', () => {
+    editingTransactionId = null;
+    const drawer = drawers.addBill;
+    drawer.querySelector('.drawer-header h3').textContent = 'Create Bill Generation';
+    document.querySelector('button[form="form-add-bill"]').textContent = 'Generate Bill';
+
     document.getElementById('form-add-bill').reset();
     document.getElementById('bill-date').value = new Date().toISOString().substring(0, 10);
     document.getElementById('bilty-rows-container').innerHTML = '';
@@ -725,14 +810,14 @@ function setupEventListeners() {
     // Add default single row to items table for better startup experience
     addItemRow();
     
-    openModal(drawers.addBill);
+    openModal(drawer);
   });
 
   // Items Table actions
   document.getElementById('btn-add-item-row').addEventListener('click', addItemRow);
   document.getElementById('btn-add-bilty-row').addEventListener('click', addBiltyRow);
 
-  // Form Submit: Create Bill
+  // Form Submit: Create/Edit Bill
   document.getElementById('form-add-bill').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -775,7 +860,11 @@ function setupEventListeners() {
     };
 
     const userId = currentUser ? currentUser.uid : null;
-    await addTransaction(userId, currentClientId, 'BILL', amount, date, desc, extraData);
+    if (editingTransactionId) {
+      await editTransaction(userId, editingTransactionId, amount, date, desc, extraData);
+    } else {
+      await addTransaction(userId, currentClientId, 'BILL', amount, date, desc, extraData);
+    }
     
     closeModal();
     renderClientDetailsData();

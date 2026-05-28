@@ -289,3 +289,41 @@ export async function deleteTransaction(userId, transactionId) {
     }
   }
 }
+
+export function editTransactionLocal(transactionId, amount, date, description = '', extraData = {}) {
+  let transactions = getLocalTransactions();
+  const txIndex = transactions.findIndex(t => t.id === transactionId);
+  if (txIndex === -1) return null;
+
+  const oldTx = transactions[txIndex];
+  const updatedTx = {
+    ...oldTx,
+    amount: Number(amount),
+    date,
+    description,
+    updatedAt: Date.now(),
+    ...extraData
+  };
+
+  transactions[txIndex] = updatedTx;
+  localStorage.setItem(getTransactionsKey(), JSON.stringify(transactions));
+  recalculateDueAmounts();
+  return updatedTx;
+}
+
+export async function editTransaction(userId, transactionId, amount, date, description = '', extraData = {}) {
+  const updatedTx = editTransactionLocal(transactionId, amount, date, description, extraData);
+  if (!updatedTx) return null;
+
+  const db = getDb();
+  if (db && userId) {
+    try {
+      const FIRESTORE_SDK = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+      const { doc, setDoc } = await import(FIRESTORE_SDK);
+      await setDoc(doc(db, 'users', userId, 'transactions', updatedTx.id), updatedTx);
+    } catch (e) {
+      console.warn('Failed to update transaction on cloud, cached locally.', e);
+    }
+  }
+  return updatedTx;
+}

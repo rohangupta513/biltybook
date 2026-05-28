@@ -354,8 +354,11 @@
             <!-- Populated dynamically by app.js -->
           </div>
         </div>
-        <div class="drawer-footer">
+        <div class="drawer-footer" style="flex-wrap: wrap;">
           <button type="button" class="btn btn-secondary flex-1" id="btn-cancel-invoice-preview">Close</button>
+          <button type="button" class="btn btn-secondary flex-1" id="btn-print-pdf-invoice" style="gap: 8px; display: flex; align-items: center; justify-content: center; border-color: var(--accent-emerald); color: var(--accent-emerald);">
+            <i data-lucide="printer"></i> Print
+          </button>
           <button type="button" class="btn btn-crimson flex-1" id="btn-download-pdf-invoice" style="gap: 8px; display: flex; align-items: center; justify-content: center;">
             <i data-lucide="download"></i> Save PDF Bill
           </button>
