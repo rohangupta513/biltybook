@@ -82,10 +82,7 @@ export async function generateInvoicePDF(client, transaction, action = 'save') {
   currentY += client.phone ? 26 : 20;
 
   // 3. Items Sold Table (Printed BEFORE Bilty Details)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12); // Increased font size from 10 to 12
-  doc.text('Items Sold', 15, currentY);
-  currentY += 4;
+  // 3. Items Sold Table (Printed BEFORE Bilty Details)
 
   // Renamed columns exactly as requested: Sl.no , Items  , No. of c/n , Qnty. per c/n , Rate , Total
   const itemHeaders = [['Sl.no', 'Items', 'No. of c/n', 'Qnty. per c/n', 'Rate', 'Total']];
