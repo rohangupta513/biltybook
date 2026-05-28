@@ -1,0 +1,18 @@
+{
+  "name": "BiltyBook - Smart Ledger & Billing",
+  "short_name": "BiltyBook",
+  "description": "Khatabook-like Ledger for Clients with Bilty Invoicing and PDF generation.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135706.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

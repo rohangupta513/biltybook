@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BiltyBook - Khatabook with Bilty Invoice</title>
+  
+  <!-- Manifest for Progressive Web App -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135706.png">
+
+  <!-- Main Stylesheets -->
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/app.css">
+  
+  <!-- Lucide Icon Pack -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+  
+  <!-- jsPDF and jsPDF AutoTable from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div class="phone-viewport">
+
+      <!-- ==================== AUTHENTICATION SCREEN ==================== -->
+      <div id="screen-auth" class="screen auth-screen">
+        <div class="auth-header">
+          <div class="logo-icon flex-center">
+            <i data-lucide="book-open"></i>
+          </div>
+          <h1>BiltyBook</h1>
+          <p>Professional Ledger & Billing Manager</p>
+        </div>
+
+        <form id="auth-form" class="auth-form">
+          <div class="form-group">
+            <label for="auth-email">Email Address</label>
+            <input type="email" id="auth-email" class="form-input" placeholder="name@company.com" required>
+          </div>
+          <div class="form-group">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="form-input" placeholder="••••••••" required>
+          </div>
+          
+          <button type="submit" id="btn-auth-submit" class="btn">Login</button>
+          
+          <div class="auth-toggle">
+            <span id="auth-toggle-text">Don't have an account?</span>
+            <span id="btn-toggle-auth">Sign Up</span>
+          </div>
+          
+          <div id="btn-local-mode" class="local-mode-link">
+            Or continue in Local Offline Mode
+          </div>
+        </form>
+      </div>
+
+      <!-- ==================== DASHBOARD SCREEN ==================== -->
+      <div id="screen-dashboard" class="screen hidden">
+        <div class="dashboard-header">
+          <div class="header-top">
+            <div class="user-profile">
+              <div class="user-avatar flex-center" id="user-avatar">B</div>
+              <div class="user-name" id="user-display-name">BiltyBook Ledger</div>
+            </div>
+            <div class="action-icons">
+              <button class="icon-btn flex-center" id="btn-settings" title="Database Configuration">
+                <i data-lucide="settings"></i>
+              </button>
+              <button class="icon-btn flex-center" id="btn-logout" title="Sign Out">
+                <i data-lucide="log-out"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Total Balance Cards -->
+          <div class="summary-card">
+            <div class="summary-item">
+              <span class="summary-label">Total Outstanding</span>
+              <span class="summary-value text-crimson" id="dashboard-total-due">Rs. 0.00</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Active Clients</span>
+              <span class="summary-value" id="dashboard-total-clients">0</span>
+            </div>
+          </div>
+
+          <!-- Search client -->
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-clients-input" placeholder="Search clients by name or place...">
+          </div>
+        </div>
+
+        <!-- Client List -->
+        <div class="client-list-container" id="client-list">
+          <!-- Populated by app.js -->
+        </div>
+
+        <!-- Add Client Floating Action Button -->
+        <button class="fab flex-center" id="btn-open-add-client" title="Add Client">
+          <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
+        </button>
+      </div>
+
+      <!-- ==================== CLIENT DETAILS SCREEN ==================== -->
+      <div id="screen-client-details" class="screen hidden">
+        <div class="client-details-header">
+          <button class="icon-btn flex-center" id="btn-back-to-dashboard">
+            <i data-lucide="arrow-left"></i>
+          </button>
+          <div class="header-title-container">
+            <div class="client-details-title" id="detail-client-name">Loading...</div>
+            <div class="client-details-subtitle" id="detail-client-place">Place</div>
+          </div>
+          <button class="icon-btn flex-center" id="btn-delete-client" title="Delete Client">
+            <i data-lucide="trash-2" class="text-crimson"></i>
+          </button>
+        </div>
+
+        <div class="client-stats">
+          <span class="client-stats-label">Net Balance Due</span>
+          <span class="client-stats-value" id="detail-client-due">Rs. 0.00</span>
+        </div>
+
+        <!-- Transactions history -->
+        <div class="transaction-timeline" id="transaction-list">
+          <!-- Populated by app.js -->
+        </div>
+
+        <!-- Floating action buttons at bottom -->
+        <div class="client-action-bar">
+          <button class="btn btn-secondary flex-center" id="btn-open-payment" style="gap: 8px;">
+            <i data-lucide="arrow-down-left" class="text-emerald"></i> Payment Received
+          </button>
+          <button class="btn btn-crimson flex-center" id="btn-open-bill" style="gap: 8px;">
+            <i data-lucide="file-plus" class="text-white"></i> Create Bill
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== MODAL OVERLAY ==================== -->
+      <div class="modal-overlay" id="modal-overlay"></div>
+
+      <!-- ==================== DRAWER: ADD CLIENT ==================== -->
+      <div class="drawer" id="drawer-add-client">
+        <div class="drawer-header">
+          <h3>Add New Client</h3>
+          <button class="icon-btn flex-center" id="btn-close-add-client">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="drawer-body">
+          <form id="form-add-client" class="auth-form">
+            <div class="form-group">
+              <label for="client-name">Client Name *</label>
+              <input type="text" id="client-name" class="form-input" placeholder="e.g., VRL Logistics Ltd." required>
+            </div>
+            <div class="form-group">
+              <label for="client-place">Place / Location *</label>
+              <input type="text" id="client-place" class="form-input" placeholder="e.g., Mumbai, Maharashtra" required>
+            </div>
+            <div class="form-group">
+              <label for="client-phone">Phone Number (Optional)</label>
+              <input type="tel" id="client-phone" class="form-input" placeholder="e.g., +91 9876543210">
+            </div>
+            <div class="form-group">
+              <label for="client-email">Email Address (Optional)</label>
+              <input type="email" id="client-email" class="form-input" placeholder="e.g., billing@vrl.com">
+            </div>
+            <div class="form-group">
+              <label for="client-notes">Other details / Notes</label>
+              <input type="text" id="client-notes" class="form-input" placeholder="e.g., GST No, Credit terms">
+            </div>
+          </form>
+        </div>
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary flex-1" id="btn-cancel-add-client">Cancel</button>
+          <button type="submit" form="form-add-client" class="btn flex-1">Save Client</button>
+        </div>
+      </div>
+
+      <!-- ==================== DRAWER: ADD PAYMENT ==================== -->
+      <div class="drawer" id="drawer-add-payment">
+        <div class="drawer-header">
+          <h3>Receive Payment</h3>
+          <button class="icon-btn flex-center" id="btn-close-payment">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="drawer-body">
+          <form id="form-add-payment" class="auth-form">
+            <div class="form-group">
+              <label for="payment-amount">Payment Amount Received (Rs.) *</label>
+              <input type="number" id="payment-amount" class="form-input" placeholder="0.00" min="1" step="any" required>
+            </div>
+            <div class="form-group">
+              <label for="payment-date">Date of Receipt *</label>
+              <input type="date" id="payment-date" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="payment-desc">Description / Payment Method</label>
+              <input type="text" id="payment-desc" class="form-input" placeholder="e.g., Cash, GPay, Bank Transfer Ref">
+            </div>
+          </form>
+        </div>
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary flex-1" id="btn-cancel-payment">Cancel</button>
+          <button type="submit" form="form-add-payment" class="btn btn-emerald flex-1" style="background: linear-gradient(135deg, var(--accent-emerald), #059669)">Record Payment</button>
+        </div>
+      </div>
+
+      <!-- ==================== DRAWER: CREATE BILL ==================== -->
+      <div class="drawer" id="drawer-add-bill" style="max-height: 92%;">
+        <div class="drawer-header">
+          <h3>Create Bill Generation</h3>
+          <button class="icon-btn flex-center" id="btn-close-bill">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="drawer-body">
+          <form id="form-add-bill" class="auth-form" style="gap: 15px;">
+            
+            <div class="form-group">
+              <label for="bill-date">Date of Bill Generation *</label>
+              <input type="date" id="bill-date" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="bill-desc">Bill Description / Invoice Notes</label>
+              <input type="text" id="bill-desc" class="form-input" placeholder="e.g., Goods dispatched from Delhi warehouse">
+            </div>
+
+            <!-- Bilty Section -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 15px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Bilty Details</label>
+                <button type="button" class="btn btn-mini btn-secondary" id="btn-add-bilty-row">
+                  <i data-lucide="plus"></i> Add Bilty
+                </button>
+              </div>
+              <div class="biltys-section" id="bilty-rows-container">
+                <!-- Dynamic Bilty Rows inserted here -->
+              </div>
+            </div>
+
+            <!-- Items sold section -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 15px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Items Sold Table</label>
+                <button type="button" class="btn btn-mini btn-secondary" id="btn-add-item-row">
+                  <i data-lucide="plus"></i> Add Item Row
+                </button>
+              </div>
+              
+              <div class="items-table-container">
+                <table class="items-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">Sl No</th>
+                      <th>Item Description</th>
+                      <th style="width: 80px; text-align: right;">Cartons</th>
+                      <th style="width: 85px; text-align: right;">Qty/Carton</th>
+                      <th style="width: 80px; text-align: right;">Rate/Pcs</th>
+                      <th style="width: 100px; text-align: right;">Total (Rs.)</th>
+                      <th style="width: 40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="items-table-body">
+                    <!-- Dynamic Item Rows -->
+                  </tbody>
+                </table>
+              </div>
+              
+              <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 12px;">
+                <span style="font-size: 14px; font-weight: 600; color: var(--text-secondary);">Grand Total:</span>
+                <span id="bill-grand-total" style="font-size: 18px; font-weight: 700; color: var(--accent-crimson);">Rs. 0.00</span>
+              </div>
+            </div>
+
+          </form>
+        </div>
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary flex-1" id="btn-cancel-bill">Cancel</button>
+          <button type="submit" form="form-add-bill" class="btn btn-crimson flex-1">Generate Bill</button>
+        </div>
+      </div>
+
+      <!-- ==================== DIALOG: FIREBASE SETTINGS ==================== -->
+      <div class="dialog" id="dialog-settings">
+        <div class="drawer-header">
+          <h3>Database Settings</h3>
+          <button class="icon-btn flex-center" id="btn-close-settings">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="drawer-body">
+          <div class="firebase-config-status offline" id="db-status-banner">
+            <i data-lucide="database"></i>
+            <span id="db-status-text">Running in Local Mode (Offline)</span>
+          </div>
+
+          <form id="form-firebase-config" class="auth-form">
+            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.4;">
+              Enter your Firebase configuration to sync ledgers across multiple Android, iOS, and Desktop devices. Leave empty to use offline storage.
+            </p>
+            <div class="form-group">
+              <label for="fb-api-key">API Key</label>
+              <input type="text" id="fb-api-key" class="form-input" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group">
+              <label for="fb-project-id">Project ID</label>
+              <input type="text" id="fb-project-id" class="form-input" placeholder="biltybook-xxxx">
+            </div>
+            <div class="form-group">
+              <label for="fb-auth-domain">Auth Domain</label>
+              <input type="text" id="fb-auth-domain" class="form-input" placeholder="biltybook-xxxx.firebaseapp.com">
+            </div>
+            <div class="form-group">
+              <label for="fb-app-id">App ID</label>
+              <input type="text" id="fb-app-id" class="form-input" placeholder="1:xxxx:web:xxxx">
+            </div>
+          </form>
+        </div>
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary flex-1" id="btn-clear-settings">Reset to Local</button>
+          <button type="submit" form="form-firebase-config" class="btn flex-1">Apply & Restart</button>
+        </div>
+      </div>
+
+      <!-- ==================== DIALOG: INVOICE PREVIEW ==================== -->
+      <div class="dialog" id="dialog-invoice-preview" style="max-width: 440px;">
+        <div class="drawer-header">
+          <h3>Invoice Summary</h3>
+          <button class="icon-btn flex-center" id="btn-close-invoice-preview">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="drawer-body" style="background-color: var(--bg-primary); padding: 15px;">
+          <div class="invoice-preview-container" id="invoice-preview-content">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+        <div class="drawer-footer">
+          <button type="button" class="btn btn-secondary flex-1" id="btn-cancel-invoice-preview">Close</button>
+          <button type="button" class="btn btn-crimson flex-1" id="btn-download-pdf-invoice" style="gap: 8px; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="download"></i> Save PDF Bill
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Primary Application Controller Script -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
