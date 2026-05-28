@@ -1,16 +1,6 @@
 // db.js - Offline-First Database Layer and Firebase Synchronization
 
 import { getDb, getFirebaseStatus } from './firebase-config.js';
-import { 
-  collection, 
-  getDocs, 
-  doc, 
-  writeBatch, 
-  setDoc, 
-  deleteDoc, 
-  query, 
-  where 
-} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 // Cache keys
 const CLIENTS_KEY = 'biltybook_clients';
@@ -112,6 +102,12 @@ export async function syncDataWithCloud(userId) {
     console.log('Firebase DB not initialized. Skipping cloud sync.');
     return recalculateDueAmounts();
   }
+
+  // Load Firebase SDK Firestore modules dynamically
+  const FIRESTORE_SDK = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+  const { 
+    collection, getDocs, doc, writeBatch, setDoc, query, where 
+  } = await import(FIRESTORE_SDK);
 
   try {
     console.log('Syncing data with cloud for user:', userId);
@@ -230,6 +226,8 @@ export async function addClient(userId, name, place, phone = '', email = '', not
   const db = getDb();
   if (db && userId) {
     try {
+      const FIRESTORE_SDK = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+      const { doc, setDoc } = await import(FIRESTORE_SDK);
       await setDoc(doc(db, 'users', userId, 'clients', newClient.id), newClient);
     } catch (e) {
       console.warn('Failed to save to cloud, will sync later.', e);
@@ -243,6 +241,8 @@ export async function deleteClient(userId, clientId) {
   const db = getDb();
   if (db && userId) {
     try {
+      const FIRESTORE_SDK = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+      const { doc, deleteDoc } = await import(FIRESTORE_SDK);
       await deleteDoc(doc(db, 'users', userId, 'clients', clientId));
     } catch (e) {
       console.warn('Failed to delete from cloud, will sync later.', e);
@@ -255,6 +255,8 @@ export async function addTransaction(userId, clientId, type, amount, date, descr
   const db = getDb();
   if (db && userId) {
     try {
+      const FIRESTORE_SDK = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+      const { doc, setDoc } = await import(FIRESTORE_SDK);
       await setDoc(doc(db, 'users', userId, 'transactions', newTx.id), newTx);
     } catch (e) {
       console.warn('Failed to add transaction to cloud, cached locally.', e);
@@ -268,6 +270,8 @@ export async function deleteTransaction(userId, transactionId) {
   const db = getDb();
   if (db && userId) {
     try {
+      const FIRESTORE_SDK = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+      const { doc, deleteDoc } = await import(FIRESTORE_SDK);
       await deleteDoc(doc(db, 'users', userId, 'transactions', transactionId));
     } catch (e) {
       console.warn('Failed to delete transaction from cloud, cached locally.', e);
