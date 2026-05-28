@@ -4,23 +4,45 @@ let app = null;
 let auth = null;
 let db = null;
 
+// Default Hardcoded Firebase Configuration
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA_yHruQxa0uC7Hrxt1pTEFyhjMNor0xgs",
+  authDomain: "biltybook-49c50.firebaseapp.com",
+  projectId: "biltybook-49c50",
+  storageBucket: "biltybook-49c50.firebasestorage.app",
+  messagingSenderId: "47851556947",
+  appId: "1:47851556947:web:16172ebb9beeeffd1776a6",
+  measurementId: "G-4F8S2XMBZK"
+};
+
 // Standard ES imports from official CDN
 const FIREBASE_APP_URL = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 const FIREBASE_AUTH_URL = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 const FIREBASE_FIRESTORE_URL = 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 export function getFirebaseStatus() {
-  const config = localStorage.getItem('biltybook_firebase_config');
+  const configStr = localStorage.getItem('biltybook_firebase_config');
+  const config = configStr ? JSON.parse(configStr) : DEFAULT_FIREBASE_CONFIG;
   return {
-    isConfigured: !!config,
+    isConfigured: !!(config && config.apiKey),
     isInitialized: app !== null,
-    config: config ? JSON.parse(config) : null
+    config: config
   };
 }
 
 export async function initializeFirebase() {
+  let config = DEFAULT_FIREBASE_CONFIG;
   const configStr = localStorage.getItem('biltybook_firebase_config');
-  if (!configStr) {
+  
+  if (configStr) {
+    try {
+      config = JSON.parse(configStr);
+    } catch (e) {
+      console.warn('Failed to parse localStorage firebase config, using default.');
+    }
+  }
+
+  if (!config || !config.apiKey || !config.projectId) {
     return false;
   }
 
