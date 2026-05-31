@@ -152,6 +152,22 @@ function closeModal() {
 
 // 1. Dashboard View
 async function loadDashboardData(shouldSync = false) {
+  // Clear the client list immediately to avoid showing another user's clients
+  const listContainer = document.getElementById('client-list');
+  if (listContainer) {
+    listContainer.innerHTML = `
+      <div class="empty-state" style="padding: 40px 20px;">
+        <div class="spinner" style="border: 3px solid rgba(0, 0, 0, 0.1); border-top-color: var(--accent-emerald); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto 12px;"></div>
+        <p>Loading clients...</p>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+  const dueEl = document.getElementById('dashboard-total-due');
+  if (dueEl) dueEl.textContent = 'Rs. 0.00';
+  const clientsCountEl = document.getElementById('dashboard-total-clients');
+  if (clientsCountEl) clientsCountEl.textContent = '0';
+
   const status = getFirebaseStatus();
   
   // Header profile text
