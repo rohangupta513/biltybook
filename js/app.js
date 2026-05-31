@@ -503,6 +503,20 @@ function openInvoicePreview(client, transaction) {
     closeModal();
   });
 
+  // Attach share listener dynamically to share button
+  const shareBtn = document.getElementById('btn-share-pdf-invoice');
+  const newShareBtn = shareBtn.cloneNode(true);
+  shareBtn.parentNode.replaceChild(newShareBtn, shareBtn);
+
+  newShareBtn.addEventListener('click', async () => {
+    if (transaction.type === 'BILL') {
+      await generateInvoicePDF(client, transaction, 'share');
+    } else {
+      await generatePaymentPDF(client, transaction, 'share');
+    }
+    closeModal();
+  });
+
   openModal(drawers.preview);
   lucide.createIcons();
 }

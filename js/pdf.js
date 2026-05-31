@@ -155,12 +155,32 @@ export async function generateInvoicePDF(client, transaction, action = 'save') {
   doc.text('Grand Total:', pageWidth - 70, currentY);
   doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 15, currentY, { align: 'right' });
 
-  // Save or Print the PDF
+  // Save or Print or Share the PDF
   const filename = `Invoice_${client.name.replace(/\s+/g, '_')}_${transaction.date}.pdf`;
   if (action === 'print') {
     doc.autoPrint();
     const blobUrl = doc.output('bloburl');
     window.open(blobUrl, '_blank');
+  } else if (action === 'share') {
+    const blob = doc.output('blob');
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: filename,
+          text: `Invoice Bill - ${client.name}`
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+        if (err.name !== 'AbortError') {
+          doc.save(filename);
+        }
+      }
+    } else {
+      alert("Web sharing is not supported on this browser/device. Saving PDF instead.");
+      doc.save(filename);
+    }
   } else {
     doc.save(filename);
   }
@@ -227,6 +247,26 @@ export async function generatePaymentPDF(client, transaction, action = 'save') {
     doc.autoPrint();
     const blobUrl = doc.output('bloburl');
     window.open(blobUrl, '_blank');
+  } else if (action === 'share') {
+    const blob = doc.output('blob');
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: filename,
+          text: `Payment Receipt - ${client.name}`
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+        if (err.name !== 'AbortError') {
+          doc.save(filename);
+        }
+      }
+    } else {
+      alert("Web sharing is not supported on this browser/device. Saving PDF instead.");
+      doc.save(filename);
+    }
   } else {
     doc.save(filename);
   }
