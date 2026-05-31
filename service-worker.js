@@ -1,4 +1,4 @@
-const CACHE_NAME = 'biltybook-cache-v6';
+const CACHE_NAME = 'biltybook-cache-v7';
 const ASSETS = [
   'index.html',
   'manifest.json',
@@ -8,7 +8,6 @@ const ASSETS = [
   'js/db.js',
   'js/firebase-config.js',
   'js/pdf.js',
-  'assets/ganesh_watermark.png',
   'https://cdn.jsdelivr.net/npm/lucide@latest',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js',
