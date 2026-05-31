@@ -29,27 +29,7 @@ export async function generateInvoicePDF(client, transaction, action = 'save') {
   doc.setTextColor(0, 0, 0);
   doc.setDrawColor(0, 0, 0);
 
-  // Load Ganesha watermark image asynchronously
-  let ganeshImg = null;
-  try {
-    ganeshImg = await loadImage('assets/ganesh_watermark.png');
-  } catch (e) {
-    console.warn('Failed to load Ganesha watermark:', e);
-  }
-
-  // Draw Ganesha watermark in background with low opacity (8%)
-  if (ganeshImg) {
-    try {
-      doc.saveGraphicsState();
-      const gState = new doc.GState({ opacity: 0.08 }); // 8% opacity is a perfect faded watermark
-      doc.setGState(gState);
-      // Center on page. A4 width is 210mm, height is 297mm. Watermark size is 120mm.
-      doc.addImage(ganeshImg, 'PNG', (pageWidth - 120) / 2, (297 - 120) / 2, 120, 120);
-      doc.restoreGraphicsState();
-    } catch (err) {
-      console.warn('Failed to apply faded watermark opacity:', err);
-    }
-  }
+  // Background watermark image removed
 
   // 1. Plain Header Title (Increased font size from 18 to 20)
   doc.setFont('helvetica', 'bold');
@@ -205,27 +185,7 @@ export async function generatePaymentPDF(client, transaction, action = 'save') {
   doc.setTextColor(0, 0, 0);
   doc.setDrawColor(0, 0, 0);
 
-  // Load Ganesha watermark image asynchronously
-  let ganeshImg = null;
-  try {
-    ganeshImg = await loadImage('assets/ganesh_watermark.png');
-  } catch (e) {
-    console.warn('Failed to load Ganesha watermark:', e);
-  }
-
-  // Draw Ganesha watermark in background with low opacity (8%)
-  if (ganeshImg) {
-    try {
-      doc.saveGraphicsState();
-      const gState = new doc.GState({ opacity: 0.08 });
-      doc.setGState(gState);
-      // Center on A5 page (148mm x 210mm). Watermark size is 80mm.
-      doc.addImage(ganeshImg, 'PNG', (pageWidth - 80) / 2, (210 - 80) / 2, 80, 80);
-      doc.restoreGraphicsState();
-    } catch (err) {
-      console.warn('Failed to apply faded watermark opacity:', err);
-    }
-  }
+  // Background watermark image removed
 
   // Title (Increased from 13 to 15)
   doc.setFont('helvetica', 'bold');
