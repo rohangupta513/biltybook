@@ -152,8 +152,7 @@ export async function generateInvoicePDF(client, transaction, action = 'save') {
   // 5. Grand Total (No border box or horizontal dividers around it)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13); // Increased from 11 to 13
-  doc.text('Grand Total:', pageWidth - 70, currentY);
-  doc.text(`Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 15, currentY, { align: 'right' });
+  doc.text(`Grand Total: Rs. ${Number(transaction.amount).toFixed(2)}`, pageWidth - 15, currentY, { align: 'right' });
 
   // Save or Print or Share the PDF
   const filename = `Invoice_${client.name.replace(/\s+/g, '_')}_${transaction.date}.pdf`;
